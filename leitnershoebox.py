@@ -103,6 +103,12 @@ class Flashcard:
 
 		flashcards.append(self)
 
+	def getQuery (self):
+		return self.query
+	
+	def getAnswer(self):
+		return self.answer
+
 	def setFreq(self, freq):
 		self.freq = freq
 
@@ -186,7 +192,8 @@ while running:
 					set = ""
 				else:
 					set = "vfc" # view flashcards
-
+			
+			#cnf clickables
 			if set == "cnf" and cardGraphic.drawRect().collidepoint(event.pos):
 				if screen_height/2 -225*9/10 < mouse_y < screen_height/2 -225*7/10:
 					selected = "question"
@@ -205,6 +212,19 @@ while running:
 					Flashcard(questionField, answerField)
 
 					set = ""
+			
+			#vfc clickables
+			if set == "vfc" and leftButton.drawRect().collidepoint(event.pos):
+				if flashcardSelected == 0:
+					flashcardSelected  = len(flashcards) - 1
+				else:
+					flashcardSelected -= 1
+			if set == "vfc" and rightButton.drawRect().collidepoint(event.pos):
+				if flashcardSelected == len(flashcards) - 1:
+					flashcardSelected = 0
+				else:
+					flashcardSelected += 1
+
 		if event.type == pygame.KEYDOWN:
 			if selected == "question":
 				questionField = appendKey(questionField, pygame.key.name(event.key), event.mod & pygame.KMOD_SHIFT)
@@ -228,10 +248,14 @@ while running:
 
 		#reusable assets
 		cardGraphic= RectObject(screen_width*5/8, screen_height/2, 700, 450, (255, 255, 255), True)
-		cnfSetConfig = TextObject("Question: ", screen_width*5/8 - 340, screen_height/2 - 225*4/5, "Lexend Medium", 28, (120, 120, 120), True, "left")
-		cnfSetConfig2 = TextObject("Answer: ", screen_width*5/8 - 340, screen_height/2 - 225*3/5, "Lexend Medium", 28, (120, 120, 120), True, "left")
+		cardConfig = TextObject("Question: ", screen_width*5/8 - 340, screen_height/2 - 225*4/5, "Lexend Medium", 28, (120, 120, 120), True, "left")
+		cardConfig2 = TextObject("Answer: ", screen_width*5/8 - 340, screen_height/2 - 225*3/5, "Lexend Medium", 28, (120, 120, 120), True, "left")
+		leftButton = RectObject(screen_width*5/8 - 300, screen_height*3/4 + 110, 150, 100, (66, 135, 245), True)
+		rightButton = RectObject(screen_width*5/8 + 300, screen_height*3/4 + 110, 150, 100, (66, 135, 245), True)
+		leftButtonText = TextObject("Prev", screen_width*5/8 - 300, screen_height*3/4 + 110, "Lexend Medium", 50, (255, 255, 255), True, "" )
+		rightButtonText = TextObject("Next", screen_width*5/8 + 300, screen_height*3/4 + 110, "Lexend Medium", 50, (255, 255, 255), True, "" )
+
 		#create new flashcard main thing
-		
 		cnfSetConfirmButton = RectObject(screen_width*5/8, screen_height*3/4 + 110, 400, 100, (0, 255, 0), True)
 		cnfSetConfirmText = TextObject("", screen_width*5/8, screen_height*3/4 + 110, "Lexend Medium", 50, (255, 255, 255), True, "" )
 
@@ -254,31 +278,43 @@ while running:
 		questionField = ""
 		answerField = ""
 		confirmation = 0
+		flashcardSelected = 0
 	#INIT ENDS HERE
 
 	#Wipe frame
 	screen.fill("black")
 
+	#set all graphics to false, if anyone needs them they can turn them on
+	cardGraphic.setShow(False)
+	cardConfig.setShow(False)
+	cardConfig2.setShow(False)
+	cnfSetConfirmButton.setShow(False)
+	cnfSetConfirmText.setShow(False)
+	leftButton.setShow(False)
+	rightButton.setShow(False)
+	leftButtonText.setShow(False)
+	rightButtonText.setShow(False)
+
 	if set == "cnf":
 		cardGraphic.setShow(True)
-		cnfSetConfig.setShow(True)
-		cnfSetConfig2.setShow(True)
+		cardConfig.setShow(True)
+		cardConfig2.setShow(True)
 		cnfSetConfirmButton.setShow(True)
 		cnfSetConfirmText.setShow(True)
 
 		#flashcard forms stuff
 		if selected == "question":
-			cnfSetConfig.setStr(f"Question: {questionField}_")
-			cnfSetConfig.setColor((30, 30, 30))
+			cardConfig.setStr(f"Question: {questionField}_")
+			cardConfig.setColor((30, 30, 30))
 		else:
-			cnfSetConfig.setStr(f"Question: {questionField}")
-			cnfSetConfig.setColor((90, 90, 90))
+			cardConfig.setStr(f"Question: {questionField}")
+			cardConfig.setColor((90, 90, 90))
 		if selected == "answer":
-			cnfSetConfig2.setStr(f"Answer: {answerField}_")
-			cnfSetConfig2.setColor((30, 30, 30))
+			cardConfig2.setStr(f"Answer: {answerField}_")
+			cardConfig2.setColor((30, 30, 30))
 		else:
-			cnfSetConfig2.setStr(f"Answer: {answerField}")
-			cnfSetConfig2.setColor((90, 90, 90))
+			cardConfig2.setStr(f"Answer: {answerField}")
+			cardConfig2.setColor((90, 90, 90))
 		mouse_pos = pygame.mouse.get_pos()
 		if confirmation == 1 and  not cnfSetConfirmButton.drawRect().collidepoint(mouse_pos):
 			confirmation = 0
@@ -287,14 +323,30 @@ while running:
 			cnfSetConfirmText.setStr("SUBMIT")
 		elif confirmation == 1:
 			cnfSetConfirmText.setStr("CONFIRM?")
-	elif set == "vfc":
-		cardGraphic.setShow(True)
 	else:
-		cardGraphic.setShow(False)
-		cnfSetConfig.setShow(False)
-		cnfSetConfig2.setShow(False)
-		cnfSetConfirmButton.setShow(False)
-		cnfSetConfirmText.setShow(False)
+		#reset cnf fields if cnf is not active
+		selected = ""
+		questionField = ""
+		answerField = ""
+
+	if set == "vfc":
+		cardGraphic.setShow(True)
+		cardConfig.setShow(True)
+		cardConfig2.setShow(True)
+
+		if len(flashcards) == 0:
+			cardConfig.setStr("No flashcards created!")
+			cardConfig2.setStr("Create a flashcard with the top button")
+		else:
+			leftButton.setShow(True)
+			rightButton.setShow(True)
+			leftButtonText.setShow(True)
+			rightButtonText.setShow(True)
+
+			cardConfig.setStr(flashcards[flashcardSelected].getQuery())
+			cardConfig2.setStr(flashcards[flashcardSelected].getAnswer())
+
+		#reset cnf fields
 		selected = ""
 		questionField = ""
 		answerField = ""
