@@ -13,7 +13,7 @@ clock = pygame.time.Clock()
 running = True
 
 class TextObject:
-	def __init__(self, str, x, y, font, fontsize, color, show, origin):
+	def __init__(self, str, x, y, font, fontsize, color, show, origin="", maxX=None, lineSpace=None):
 		self.str = str
 		self.x = x
 		self.y = y
@@ -22,18 +22,58 @@ class TextObject:
 		self.color = color
 		self.show = show
 		self.origin = origin
+		self.maxX = maxX
+		self.lineSpace = lineSpace
 
 		self.trueFont = pygame.font.SysFont(font, fontsize)
 
-		self.width, self.height = self.trueFont.size(str)
-
-		self.render = self.trueFont.render(str, True, color)
+		self.reRender()
 
 		textObjects.append(self)
 
-	def getRender(self):
-		return self.render
+	#this thing sets the width, height, and render
+	def reRender(self):
+		if self.maxX != None:
+			self.wrappers = self.wrapTextRenders()
+			self.renders = [self.trueFont.render(line, True, self.color) for line in self.wrappers]
+			if self.renders:
+				self.width = max(self.trueFont.size(line)[0] for line in self.wrappers)
+				self.height = len(self.wrappers) * self.trueFont.get_linesize()
+			else:
+				self.width, self.height = 0
+		else:
+			self.width, self.height = self.trueFont.size(self.str)
+			self.renders = [self.trueFont.render(self.str, True, self.color)]
+			self.wrappers = [self.str]
+
+	def wrapTextRenders(self):
+		stringParts = self.str.split(' ')
+		#spaceWidth = self.trueFont.size(' ')[0]
+		lines = []
+		currentLine = []
+
+		for part in stringParts:
+			testLine = ' '.join(currentLine + [part])
+			testWidth = self.trueFont.size(testLine)[0]
+
+			if testWidth <= self.maxX:
+				currentLine.append(part)
+			else:
+				if currentLine:
+					lines.append(' '.join(currentLine))
+					currentLine = [part]
+				else:
+					lines.append([part])
+		if currentLine:
+			lines.append(" ".join(currentLine))
+		return lines if lines else ['']
+
+	def getRenders(self):
+		return self.renders
 	
+	def getLineSpace(self):
+		return self.lineSpace
+
 	def getX(self):
 		return self.x
 	
@@ -46,6 +86,9 @@ class TextObject:
 	def getWidth(self):
 		return self.width
 	
+	def getLineHeight(self):
+		return self.trueFont.get_linesize()
+
 	def getHeight(self):
 		return self.height
 	
@@ -57,12 +100,11 @@ class TextObject:
 
 	def setStr(self, str):
 		self.str = str
-		self.width, self.height = self.trueFont.size(str)
-		self.render = self.trueFont.render(str, True, self.color)
+		self.reRender()
 
 	def setColor(self, color):
 		self.color = color
-		self.render = self.trueFont.render(self.str, True, color)
+		self.renders = [self.trueFont.render(line, True, color) for line in self.wrappers]
 	
 class RectObject:
 	def __init__(self, x, y, width, length, color, show):
@@ -197,7 +239,7 @@ while running:
 			if set == "cnf" and cardGraphic.drawRect().collidepoint(event.pos):
 				if screen_height/2 -225*9/10 < mouse_y < screen_height/2 -225*7/10:
 					selected = "question"
-				elif screen_height/2 -225*7/10 < mouse_y < screen_height/2 -225*5/10:
+				elif screen_height/2 -225*3/10 < mouse_y < screen_height/2 -225*1/10:
 					selected = "answer"
 				else:
 					selected = ""
@@ -243,35 +285,35 @@ while running:
 		cnfButtonX = screen_width/5 - 100
 		cnfButtonY = screen_height*0.15
 		cnfRect = RectObject(cnfButtonX, cnfButtonY, 190, 140, (0, 255, 0), True)
-		cnfText = TextObject("Create new", cnfButtonX, cnfButtonY - 20, "Lexend Medium", 32, (255, 255, 255), True, "")
-		cnfText2 = TextObject("flashcard", cnfButtonX, cnfButtonY + 20, "Lexend Medium", 32, (255, 255, 255), True, "")
+		cnfText = TextObject("Create new", cnfButtonX, cnfButtonY - 20, "Lexend Medium", 32, (255, 255, 255), True)
+		cnfText2 = TextObject("flashcard", cnfButtonX, cnfButtonY + 20, "Lexend Medium", 32, (255, 255, 255), True)
 
 		#reusable assets
 		cardGraphic= RectObject(screen_width*5/8, screen_height/2, 700, 450, (255, 255, 255), True)
-		cardConfig = TextObject("Question: ", screen_width*5/8 - 340, screen_height/2 - 225*4/5, "Lexend Medium", 28, (120, 120, 120), True, "left")
-		cardConfig2 = TextObject("Answer: ", screen_width*5/8 - 340, screen_height/2 - 225*3/5, "Lexend Medium", 28, (120, 120, 120), True, "left")
+		cardConfig = TextObject("Question: ", screen_width*5/8 - 340, screen_height/2 - 225*4/5, "Lexend Medium", 28, (120, 120, 120), True, "left", screen_width*5/8 + 350)
+		cardConfig2 = TextObject("Answer: ", screen_width*5/8 - 340, screen_height/2 - 225*1/5, "Lexend Medium", 28, (120, 120, 120), True, "left", screen_width*5/8 + 350)
 		leftButton = RectObject(screen_width*5/8 - 300, screen_height*3/4 + 110, 150, 100, (66, 135, 245), True)
 		rightButton = RectObject(screen_width*5/8 + 300, screen_height*3/4 + 110, 150, 100, (66, 135, 245), True)
-		leftButtonText = TextObject("Prev", screen_width*5/8 - 300, screen_height*3/4 + 110, "Lexend Medium", 50, (255, 255, 255), True, "" )
-		rightButtonText = TextObject("Next", screen_width*5/8 + 300, screen_height*3/4 + 110, "Lexend Medium", 50, (255, 255, 255), True, "" )
+		leftButtonText = TextObject("Prev", screen_width*5/8 - 300, screen_height*3/4 + 110, "Lexend Medium", 50, (255, 255, 255), True)
+		rightButtonText = TextObject("Next", screen_width*5/8 + 300, screen_height*3/4 + 110, "Lexend Medium", 50, (255, 255, 255), True)
 
 		#create new flashcard main thing
 		cnfSetConfirmButton = RectObject(screen_width*5/8, screen_height*3/4 + 110, 400, 100, (0, 255, 0), True)
-		cnfSetConfirmText = TextObject("", screen_width*5/8, screen_height*3/4 + 110, "Lexend Medium", 50, (255, 255, 255), True, "" )
+		cnfSetConfirmText = TextObject("", screen_width*5/8, screen_height*3/4 + 110, "Lexend Medium", 50, (255, 255, 255), True)
 
 		#daily review button
 		drvButtonX = screen_width/5 - 100
 		drvButtonY = screen_height*0.47
 		drvRect = RectObject(drvButtonX, drvButtonY, 190, 190, (255, 209, 25), True)
-		drvText = TextObject("Daily", drvButtonX, drvButtonY - 20, "Lexend Medium", 32, (255, 255, 255), True, "")
-		drvText2 = TextObject("Review", drvButtonX, drvButtonY + 20, "Lexend Medium", 32, (255, 255, 255), True, "")
+		drvText = TextObject("Daily", drvButtonX, drvButtonY - 20, "Lexend Medium", 32, (255, 255, 255), True)
+		drvText2 = TextObject("Review", drvButtonX, drvButtonY + 20, "Lexend Medium", 32, (255, 255, 255), True)
 
 		#view flashcards button
 		vfcButtonX = screen_width/5 - 100
 		vfcButtonY = screen_height*0.80
 		vfcRect = RectObject(vfcButtonX, vfcButtonY, 190, 190, (66, 135, 245), True)
-		vfcText = TextObject("View", vfcButtonX, vfcButtonY - 20, "Lexend Medium", 32, (255, 255, 255), True, "")
-		vfcText2 = TextObject("flashcards", vfcButtonX, vfcButtonY + 20, "Lexend Medium", 32, (255, 255, 255), True, "")
+		vfcText = TextObject("View", vfcButtonX, vfcButtonY - 20, "Lexend Medium", 32, (255, 255, 255), True)
+		vfcText2 = TextObject("flashcards", vfcButtonX, vfcButtonY + 20, "Lexend Medium", 32, (255, 255, 255), True)
 		init = False
 		set = ""
 		selected = ""
@@ -328,6 +370,8 @@ while running:
 		selected = ""
 		questionField = ""
 		answerField = ""
+		cardConfig.setColor((90, 90, 90))
+		cardConfig2.setColor((90, 90, 90))
 
 	if set == "vfc":
 		cardGraphic.setShow(True)
@@ -358,9 +402,11 @@ while running:
 	for i in textObjects:
 		if(i.getShow()):
 			if i.getOrigin() == "left":
-				screen.blit(i.getRender(), (i.getX(), i.getY() - i.getHeight()/2))
+				for j in range(len(i.getRenders())):
+					screen.blit(i.getRenders()[j], (i.getX(), i.getY() - i.getHeight()/2 + j*i.getLineHeight()))
 			else:
-				screen.blit(i.getRender(), (i.getX() - i.getWidth()/2, i.getY() - i.getHeight()/2))
+				for j in range(len(i.getRenders())):
+					screen.blit(i.getRenders()[j], (i.getX() - i.getWidth()/2, i.getY() - i.getHeight()/2 + j*i.getLineHeight()))
 
 	# flip() the display to put your work on screen
 	pygame.display.flip()
