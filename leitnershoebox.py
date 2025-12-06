@@ -105,6 +105,13 @@ class TextObject:
 	def setColor(self, color):
 		self.color = color
 		self.renders = [self.trueFont.render(line, True, color) for line in self.wrappers]
+
+	def setOrigin(self, origin):
+		self.origin = origin
+
+	def setPos(self, x, y):
+		self.x = x
+		self.y = y
 	
 class RectObject:
 	def __init__(self, x, y, width, length, color, show):
@@ -123,6 +130,9 @@ class RectObject:
 	def getShow(self):
 		return self.show
 	
+	def setColor(self, color):
+		self.color = color
+	
 	def setShow(self, show):
 		self.show = show
 
@@ -135,13 +145,13 @@ flashcards = []
 class Flashcard:
 	# query: question flashcard asks you
 	# answer: answer to the question of flashcard
-	# freq: current day frequency of flashcard
-	# count: current count of days till do flashcard
+	# freq: current max countdown of flashcard
+	# count: current countdown till do flashcard
 	def __init__(self, query, answer):
 		self.query = query
 		self.answer = answer
-		self.freq = 1
-		self.count = 1
+		self.freq = 0
+		self.count = 0
 
 		flashcards.append(self)
 
@@ -150,6 +160,9 @@ class Flashcard:
 	
 	def getAnswer(self):
 		return self.answer
+	
+	def getFreq(self):
+		return self.freq
 
 	def setFreq(self, freq):
 		self.freq = freq
@@ -237,9 +250,10 @@ while running:
 			
 			#cnf clickables
 			if set == "cnf" and cardGraphic.drawRect().collidepoint(event.pos):
-				if screen_height/2 -225*9/10 < mouse_y < screen_height/2 -225*7/10:
+				# the question/answer click check is hard coded. this is Bad
+				if screen_height/2 -225 < mouse_y < screen_height/2 -225*8/10:
 					selected = "question"
-				elif screen_height/2 -225*3/10 < mouse_y < screen_height/2 -225*1/10:
+				elif screen_height/2 -225*2/10 < mouse_y < screen_height/2 - 225*0/10:
 					selected = "answer"
 				else:
 					selected = ""
@@ -267,6 +281,20 @@ while running:
 				else:
 					flashcardSelected += 1
 
+			#drv clickables
+			if set == "drv" and cnfSetConfirmButton.drawRect().collidepoint(event.pos):
+				if dailyReviewActive == 0:
+					#set up the cards
+					for card in flashcards:
+						if card.getFreq() == 0:
+							cardsToReview.append(card)
+						else:
+							card.addCount(-1)
+					dailyReviewActive = 1
+				else:
+					answerRevealed = 1
+
+
 		if event.type == pygame.KEYDOWN:
 			if selected == "question":
 				questionField = appendKey(questionField, pygame.key.name(event.key), event.mod & pygame.KMOD_SHIFT)
@@ -290,8 +318,8 @@ while running:
 
 		#reusable assets
 		cardGraphic= RectObject(screen_width*5/8, screen_height/2, 700, 450, (255, 255, 255), True)
-		cardConfig = TextObject("Question: ", screen_width*5/8 - 340, screen_height/2 - 225*4/5, "Lexend Medium", 28, (120, 120, 120), True, "left", screen_width*5/8 + 350)
-		cardConfig2 = TextObject("Answer: ", screen_width*5/8 - 340, screen_height/2 - 225*1/5, "Lexend Medium", 28, (120, 120, 120), True, "left", screen_width*5/8 + 350)
+		cardConfig = TextObject("Question: ", screen_width*5/8 - 340, screen_height/2 - 225*5/5, "Lexend Medium", 28, (120, 120, 120), True, "left", 650)
+		cardConfig2 = TextObject("Answer: ", screen_width*5/8 - 340, screen_height/2 - 225*1/5, "Lexend Medium", 28, (120, 120, 120), True, "left", 650)
 		leftButton = RectObject(screen_width*5/8 - 300, screen_height*3/4 + 110, 150, 100, (66, 135, 245), True)
 		rightButton = RectObject(screen_width*5/8 + 300, screen_height*3/4 + 110, 150, 100, (66, 135, 245), True)
 		leftButtonText = TextObject("Prev", screen_width*5/8 - 300, screen_height*3/4 + 110, "Lexend Medium", 50, (255, 255, 255), True)
@@ -307,6 +335,10 @@ while running:
 		drvRect = RectObject(drvButtonX, drvButtonY, 190, 190, (255, 209, 25), True)
 		drvText = TextObject("Daily", drvButtonX, drvButtonY - 20, "Lexend Medium", 32, (255, 255, 255), True)
 		drvText2 = TextObject("Review", drvButtonX, drvButtonY + 20, "Lexend Medium", 32, (255, 255, 255), True)
+		dailyReviewActive = 0
+		cardsToReview = []
+		currentReviewCard = 0
+		answerRevealed = 0
 
 		#view flashcards button
 		vfcButtonX = screen_width/5 - 100
@@ -337,6 +369,10 @@ while running:
 	leftButtonText.setShow(False)
 	rightButtonText.setShow(False)
 
+	# the only reason these are here is for the one time that cardconfig2 is used for the
+	# start daily review title. there is probably a better way to do this
+	cardConfig2.setOrigin("left")
+	cardConfig2.setPos(screen_width*5/8 - 340, screen_height/2 - 225*1/5)
 	if set == "cnf":
 		cardGraphic.setShow(True)
 		cardConfig.setShow(True)
@@ -384,6 +420,8 @@ while running:
 		else:
 			leftButton.setShow(True)
 			rightButton.setShow(True)
+			leftButton.setColor((66, 135, 245))
+			rightButton.setColor((66, 135, 245))
 			leftButtonText.setShow(True)
 			rightButtonText.setShow(True)
 
@@ -394,6 +432,37 @@ while running:
 		selected = ""
 		questionField = ""
 		answerField = ""
+	if set == "drv":
+		cardGraphic.setShow(True)
+		cardConfig.setColor((30, 30, 30))
+		cardConfig2.setColor((30, 30, 30))
+		if len(flashcards) == 0:
+			cardConfig.setShow(True)
+			cardConfig2.setShow(True)
+			cardConfig.setStr("No flashcards created!")
+			cardConfig2.setStr("Create a flashcard with the top button")
+		elif dailyReviewActive == 0:
+			cardConfig2.setOrigin("")
+			cardConfig2.setPos(screen_width*5/8, screen_height/2)
+			cardConfig2.setStr("Start daily review?")
+			cnfSetConfirmText.setStr("CONFIRM")
+			cardConfig2.setShow(True)
+			cnfSetConfirmButton.setShow(True)
+			cnfSetConfirmText.setShow(True)
+		else:
+			cardConfig.setShow(True)
+			for card in cardsToReview:
+				cardConfig.setStr(card.getQuery())
+				if answerRevealed == 0:
+					cardConfig2.setShow(False)
+					cnfSetConfirmText.setStr("REVEAL")
+					cnfSetConfirmButton.setShow(True)
+					cnfSetConfirmText.setShow(True)
+				else:
+					cardConfig2.setStr(card.getAnswer())
+					cardConfig2.setShow(True)
+					
+
 
 	# Draw everything (text on top of rect)
 	for i in rectObjects:
@@ -401,9 +470,10 @@ while running:
 			i.drawRect()
 	for i in textObjects:
 		if(i.getShow()):
+			# Make text not centered, set x and y to top left
 			if i.getOrigin() == "left":
 				for j in range(len(i.getRenders())):
-					screen.blit(i.getRenders()[j], (i.getX(), i.getY() - i.getHeight()/2 + j*i.getLineHeight()))
+					screen.blit(i.getRenders()[j], (i.getX(), i.getY() + j*i.getLineHeight()))
 			else:
 				for j in range(len(i.getRenders())):
 					screen.blit(i.getRenders()[j], (i.getX() - i.getWidth()/2, i.getY() - i.getHeight()/2 + j*i.getLineHeight()))
