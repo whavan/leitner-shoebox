@@ -1,0 +1,1 @@
+the daily review button has this logic: if the flashcard's counter is 0, add it to the cardsToReview list. if it's not, decrease the counter by 1. there is a debug command that triggers to give all the flashcards and the counts of the flashcards. the debug command says that things are really not working

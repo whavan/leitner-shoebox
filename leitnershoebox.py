@@ -108,6 +108,11 @@ class TextObject:
 
 	def setOrigin(self, origin):
 		self.origin = origin
+	
+	def setFontSize(self, fontsize):
+		self.fontsize = fontsize
+		self.trueFont = pygame.font.SysFont(self.font, fontsize)
+		self.reRender()
 
 	def setPos(self, x, y):
 		self.x = x
@@ -147,7 +152,7 @@ class Flashcard:
 	# answer: answer to the question of flashcard
 	# freq: current max countdown of flashcard
 	# count: current countdown till do flashcard
-	def __init__(self, query, answer):
+	def __init__(self, query: str, answer: str):
 		self.query = query
 		self.answer = answer
 		self.freq = 0
@@ -155,7 +160,7 @@ class Flashcard:
 
 		flashcards.append(self)
 
-	def getQuery (self):
+	def getQuery (self) -> str:
 		return self.query
 	
 	def getAnswer(self):
@@ -163,6 +168,9 @@ class Flashcard:
 	
 	def getFreq(self):
 		return self.freq
+	
+	def getCount(self) -> int:
+		return self.count
 
 	def setFreq(self, freq):
 		self.freq = freq
@@ -276,6 +284,9 @@ while running:
 				else:
 					flashcardSelected -= 1
 			if set == "vfc" and rightButton.drawRect().collidepoint(event.pos):
+				print("---")
+				for card in flashcards:
+					print(card.getQuery() + " " + str(card.getCount()))
 				if flashcardSelected == len(flashcards) - 1:
 					flashcardSelected = 0
 				else:
@@ -286,13 +297,35 @@ while running:
 				if dailyReviewActive == 0:
 					#set up the cards
 					for card in flashcards:
-						if card.getFreq() == 0:
+						if card.getCount() == 0:
 							cardsToReview.append(card)
 						else:
 							card.addCount(-1)
+						print("---")
+					for card in cardsToReview:
+						print(card.getQuery() + " " + str(card.getCount()))
 					dailyReviewActive = 1
 				else:
 					answerRevealed = 1
+			if set == "drv" and leftButton.drawRect().collidepoint(event.pos):
+				if answerRevealed == 1:
+					increase = cardsToReview[currentReviewCard].getFreq() + 1
+					cardsToReview[currentReviewCard].setFreq(increase)
+					cardsToReview[currentReviewCard].setCount(increase)
+					answerRevealed = 0
+					if currentReviewCard != len(cardsToReview) - 1:
+						currentReviewCard += 1
+					else:
+						dailyReviewActive = 0
+			if set == "drv" and rightButton.drawRect().collidepoint(event.pos):
+				if answerRevealed == 1:
+					cardsToReview[currentReviewCard].setFreq(0)
+					cardsToReview[currentReviewCard].setCount(0)
+					answerRevealed = 0
+					if currentReviewCard != len(cardsToReview) - 1:
+						currentReviewCard += 1
+					else:
+						dailyReviewActive = 0
 
 
 		if event.type == pygame.KEYDOWN:
@@ -368,11 +401,13 @@ while running:
 	rightButton.setShow(False)
 	leftButtonText.setShow(False)
 	rightButtonText.setShow(False)
-
-	# the only reason these are here is for the one time that cardconfig2 is used for the
-	# start daily review title. there is probably a better way to do this
+	
+	#set default attributes
+	cnfSetConfirmText.setFontSize(50)
 	cardConfig2.setOrigin("left")
+	cardConfig2.setFontSize(28)
 	cardConfig2.setPos(screen_width*5/8 - 340, screen_height/2 - 225*1/5)
+
 	if set == "cnf":
 		cardGraphic.setShow(True)
 		cardConfig.setShow(True)
@@ -422,6 +457,8 @@ while running:
 			rightButton.setShow(True)
 			leftButton.setColor((66, 135, 245))
 			rightButton.setColor((66, 135, 245))
+			leftButtonText.setStr("Prev")
+			rightButtonText.setStr("Next")
 			leftButtonText.setShow(True)
 			rightButtonText.setShow(True)
 
@@ -443,6 +480,7 @@ while running:
 			cardConfig2.setStr("Create a flashcard with the top button")
 		elif dailyReviewActive == 0:
 			cardConfig2.setOrigin("")
+			cardConfig2.setFontSize(40)
 			cardConfig2.setPos(screen_width*5/8, screen_height/2)
 			cardConfig2.setStr("Start daily review?")
 			cnfSetConfirmText.setStr("CONFIRM")
@@ -451,17 +489,26 @@ while running:
 			cnfSetConfirmText.setShow(True)
 		else:
 			cardConfig.setShow(True)
-			for card in cardsToReview:
-				cardConfig.setStr(card.getQuery())
-				if answerRevealed == 0:
-					cardConfig2.setShow(False)
-					cnfSetConfirmText.setStr("REVEAL")
-					cnfSetConfirmButton.setShow(True)
-					cnfSetConfirmText.setShow(True)
-				else:
-					cardConfig2.setStr(card.getAnswer())
-					cardConfig2.setShow(True)
-					
+			cardConfig.setStr(cardsToReview[currentReviewCard].getQuery())
+			if answerRevealed == 0:
+				cardConfig2.setShow(False)
+				cnfSetConfirmText.setStr("REVEAL")
+				cnfSetConfirmButton.setShow(True)
+				cnfSetConfirmText.setShow(True)
+			else:
+				cardConfig2.setStr(cardsToReview[currentReviewCard].getAnswer())
+				cardConfig2.setShow(True)
+				rightButton.setColor((247, 77, 77))
+				leftButton.setColor((77, 247, 85))
+				leftButtonText.setStr("Yes")
+				rightButtonText.setStr("No")
+				leftButton.setShow(True)
+				leftButtonText.setShow(True)
+				rightButton.setShow(True)
+				rightButtonText.setShow(True)
+				cnfSetConfirmText.setFontSize(32)
+				cnfSetConfirmText.setStr("Did you remember this?")
+				cnfSetConfirmText.setShow(True)
 
 
 	# Draw everything (text on top of rect)
