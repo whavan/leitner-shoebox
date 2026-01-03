@@ -1,5 +1,6 @@
 # Example file showing a basic pygame "game loop"
 import pygame
+import pickle
 
 # pygame setup
 pygame.init()
@@ -141,6 +142,9 @@ class RectObject:
 	def setShow(self, show):
 		self.show = show
 
+	def setWidth(self, width):
+		self.width = width
+
 textObjects = []
 
 rectObjects = []
@@ -231,6 +235,8 @@ while running:
     # pygame.QUIT event means the user clicked X to close your window
 	for event in pygame.event.get():
 		if event.type == pygame.QUIT:
+			with open('cardsave.pkl', 'wb') as file:
+				pickle.dump(flashcards, file)
 			running = False
 
 		if event.type == pygame.MOUSEBUTTONUP:
@@ -274,7 +280,7 @@ while running:
 
 					# the flashcard code here
 					Flashcard(questionField, answerField)
-
+					
 					set = ""
 			
 			#vfc clickables
@@ -284,27 +290,38 @@ while running:
 				else:
 					flashcardSelected -= 1
 			if set == "vfc" and rightButton.drawRect().collidepoint(event.pos):
-				print("---")
-				for card in flashcards:
-					print(card.getQuery() + " " + str(card.getCount()))
+				#print("---")
+				#for card in flashcards:
+				#	print(card.getQuery() + " " + str(card.getCount()))
 				if flashcardSelected == len(flashcards) - 1:
 					flashcardSelected = 0
 				else:
 					flashcardSelected += 1
+			if set == "vfc" and cnfSetConfirmButton.drawRect().collidepoint(event.pos):
+				if confirmation == 0:
+					confirmation = 1
+				elif confirmation == 1:
+					flashcards.pop(flashcardSelected)
+					confirmation = 0
 
 			#drv clickables
 			if set == "drv" and cnfSetConfirmButton.drawRect().collidepoint(event.pos):
 				if dailyReviewActive == 0:
-					#set up the cards
+					#set up the cards and variables
+					cardsToReview = []
+					currentReviewCard = 0
 					for card in flashcards:
 						if card.getCount() == 0:
 							cardsToReview.append(card)
 						else:
 							card.addCount(-1)
-						print("---")
-					for card in cardsToReview:
-						print(card.getQuery() + " " + str(card.getCount()))
+					# print the list of flashcards in cardsToReview
+					#print("---")
+					#for card in cardsToReview:
+					#	print(card.getQuery() + " " + str(card.getCount()))
 					dailyReviewActive = 1
+				elif len(cardsToReview) == 0:
+					dailyReviewActive = 0
 				else:
 					answerRevealed = 1
 			if set == "drv" and leftButton.drawRect().collidepoint(event.pos):
@@ -386,6 +403,14 @@ while running:
 		answerField = ""
 		confirmation = 0
 		flashcardSelected = 0
+		try:
+			with open('cardsave.pkl', 'rb') as file:
+				flashcards = pickle.load(file)
+		except FileNotFoundError as e:
+			with open('cardsave.pkl', 'wb') as file:
+				pickle.dump(flashcards, file)
+		except Exception as e:
+			print(e)
 	#INIT ENDS HERE
 
 	#Wipe frame
@@ -407,6 +432,8 @@ while running:
 	cardConfig2.setOrigin("left")
 	cardConfig2.setFontSize(28)
 	cardConfig2.setPos(screen_width*5/8 - 340, screen_height/2 - 225*1/5)
+	cnfSetConfirmButton.setWidth(400)
+	cnfSetConfirmButton.setColor((0, 255, 0))
 
 	if set == "cnf":
 		cardGraphic.setShow(True)
@@ -461,6 +488,18 @@ while running:
 			rightButtonText.setStr("Next")
 			leftButtonText.setShow(True)
 			rightButtonText.setShow(True)
+			cnfSetConfirmButton.setShow(True)
+			cnfSetConfirmText.setShow(True)
+			cnfSetConfirmButton.setColor((255, 20, 20))
+			cnfSetConfirmButton.setWidth(250)
+			mouse_pos = pygame.mouse.get_pos()
+			if confirmation == 1 and  not cnfSetConfirmButton.drawRect().collidepoint(mouse_pos):
+				confirmation = 0
+			if confirmation == 1:
+				cnfSetConfirmText.setStr("Confirm?")
+			else:
+				cnfSetConfirmText.setStr("Delete")
+
 
 			cardConfig.setStr(flashcards[flashcardSelected].getQuery())
 			cardConfig2.setStr(flashcards[flashcardSelected].getAnswer())
@@ -484,6 +523,15 @@ while running:
 			cardConfig2.setPos(screen_width*5/8, screen_height/2)
 			cardConfig2.setStr("Start daily review?")
 			cnfSetConfirmText.setStr("CONFIRM")
+			cardConfig2.setShow(True)
+			cnfSetConfirmButton.setShow(True)
+			cnfSetConfirmText.setShow(True)
+		elif len(cardsToReview) == 0:
+			cardConfig2.setOrigin("")
+			cardConfig2.setFontSize(40)
+			cardConfig2.setPos(screen_width*5/8, screen_height/2)
+			cardConfig2.setStr("No cards to review today!")
+			cnfSetConfirmText.setStr("END")
 			cardConfig2.setShow(True)
 			cnfSetConfirmButton.setShow(True)
 			cnfSetConfirmText.setShow(True)
